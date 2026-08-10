@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1E2B24">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Home">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="icon" href="/icons/icon-192.png">
+<title>Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/config.js"></script>
+<style>
+  :root{
+    --ink:#1E2B24;
+    --ink-soft:#28382F;
+    --paper:#F7F3E8;
+    --card:#FFFDF6;
+    --line:#E4DECB;
+    --text:#2A2620;
+    --text-soft:#7A7364;
+    --text-faint:#A7A08E;
+    --joao:#3B6EA5;
+    --kylah:#D66B90;
+    --israel:#7B5EA7;
+    --izzy:#4A8F5C;
+    --overdue:#C6455B;
+    --today:#D9A234;
+    --weekly:#7B5EA7;
+    --success:#3C8C86;
+    --shadow: 0 1px 2px rgba(30,43,36,.06), 0 4px 14px rgba(30,43,36,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--text);
+    font-family:'Manrope',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3,.display{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:.01em;}
+  button{font-family:inherit; cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  ::selection{background:var(--mustard); color:var(--ink);}
+
+  /* ---------- App shell ---------- */
+  #app{min-height:100vh; display:flex; flex-direction:column;}
+  .hidden{display:none !important;}
+
+  /* ---------- Person picker ---------- */
+  #picker{
+    position:fixed; inset:0; background:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:999; padding:32px; text-align:center;
+  }
+  .people-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; width:100%; max-width:360px;}
+  .person-btn{
+    border:none; border-radius:16px; padding:22px 10px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    color:#fff; font-weight:700; font-size:16px;
+    transform:translateY(0); transition:transform .15s ease, box-shadow .15s ease;
+    box-shadow:0 6px 0 rgba(0,0,0,.18);
+  }
+  .person-btn:active{transform:translateY(4px); box-shadow:0 2px 0 rgba(0,0,0,.18);}
+  .person-btn .initial{
+    width:44px;height:44px;border-radius:50%;
+    background:rgba(255,255,255,.22);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif; font-size:19px; font-weight:600;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; align-items:center; justify-content:flex-end;
+    padding:18px 20px 14px; background:var(--paper);
+    position:sticky; top:0; z-index:20;
+    border-bottom:1px solid var(--line);
+  }
+  #whoami{
+    width:30px;height:30px;border-radius:50%; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:700; font-family:'Fraunces',serif;
+    box-shadow:var(--shadow);
+  }
+
+  /* ---------- Layout: nav + main ---------- */
+  #shell{flex:1; display:flex; width:100%; max-width:900px; margin:0 auto;}
+  nav#tabs{
+    display:flex; justify-content:space-around; align-items:center;
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--ink); padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+    z-index:30; box-shadow:0 -4px 16px rgba(0,0,0,.12);
+  }
+  nav#tabs button{
+    background:none; border:none; color:#8FA097; display:flex; flex-direction:column; align-items:center; gap:4px;
+    font-size:10px; font-weight:600; letter-spacing:.02em; padding:6px 10px; border-radius:10px;
+    transition:color .15s ease;
+  }
+  nav#tabs button svg{width:20px;height:20px; stroke:currentColor; fill:none; stroke-width:1.8;}
+  nav#tabs button.active{color:var(--paper);}
+  nav#tabs button.active .tab-chip{background:rgba(247,243,232,.12);}
+  main{flex:1; padding:18px 18px 100px; width:100%;}
+
+  section.screen{display:none; animation:fadeIn .25s ease;}
+  section.screen.active{display:block;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+  .eyebrow{font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin:0 0 4px;}
+  .screen h2{font-size:26px; margin:0 0 18px; font-weight:600;}
+
+  /* ---------- Cards ---------- */
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:16px; box-shadow:var(--shadow); margin-bottom:12px;
+  }
+  .card-title{font-size:12px; font-weight:700; color:var(--text-soft); text-transform:uppercase; letter-spacing:.06em; margin:0 0 10px; font-family:'IBM Plex Mono';}
+
+  /* ---------- Home ---------- */
+  .greeting{font-size:28px; margin:0 0 2px;}
+  .greeting-sub{color:var(--text-soft); margin:0 0 20px; font-size:14px;}
+  .stat-row{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px;}
+  .stat{background:var(--ink); color:var(--paper); border-radius:14px; padding:12px 10px;}
+  .stat .num{font-family:'Fraunces'; font-size:24px; font-weight:600; line-height:1;}
+  .stat .lbl{font-size:9px; color:#A9B7AE; text-transform:uppercase; letter-spacing:.04em; font-family:'IBM Plex Mono'; margin-top:4px;}
+  .roster{display:flex; gap:8px; flex-wrap:wrap; margin-top:2px;}
+  .chip{
+    display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line);
+    border-radius:999px; padding:5px 10px 5px 5px; font-size:12px; font-weight:600; color:var(--text);
+  }
+  .chip-count{background:var(--ink); color:var(--paper); font-size:10px; font-family:'IBM Plex Mono'; font-weight:700; border-radius:999px; padding:1px 6px; margin-left:2px;}
+  .chip .dot-sm, .dot-sm{width:20px;height:20px;border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; font-family:'Fraunces';flex-shrink:0;}
+  .attendee-dots{display:flex; flex-shrink:0;}
+  .attendee-dots .dot-sm{margin-left:-6px; border:2px solid var(--card);}
+  .attendee-dots .dot-sm:first-child{margin-left:0;}
+
+  .list-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .list-row:last-child{border-bottom:none;}
+  .rtitle{font-weight:600; font-size:14px; flex:1;}
+  .del{background:var(--paper); border:1px solid var(--line); border-radius:10px; color:var(--text-soft); padding:9px; margin-left:auto; flex-shrink:0;}
+  .del svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;}
+  .list-row .rmeta{font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono';}
+  .empty{color:var(--text-faint); font-size:13px; padding:14px 4px; font-style:italic;}
+
+  /* ---------- Add bar (groceries/tasks) ---------- */
+  .add-bar{display:flex; gap:8px; margin-bottom:16px;}
+  .add-bar input[type=text]{
+    flex:1; border:1px solid var(--line); background:var(--card); border-radius:12px;
+    padding:12px 14px; font-size:14px; outline:none;
+  }
+  .add-bar input[type=text]:focus{border-color:var(--success);}
+  .btn{
+    border:none; border-radius:12px; background:var(--ink); color:var(--paper);
+    padding:12px 18px; font-weight:700; font-size:13px; white-space:nowrap;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:transparent; color:var(--ink); border:1.5px solid var(--ink); padding:10.5px 18px;}
+  .btn.small{padding:8px 14px; font-size:12px; border-radius:10px;}
+  .btn.block{width:100%;}
+
+  .adv-toggle{display:flex; justify-content:flex-end; margin:-10px 0 12px;}
+  .adv-toggle button{background:none;border:none;color:var(--text-soft);font-size:12px;text-decoration:underline; font-family:'IBM Plex Mono';}
+  .adv-fields{display:none; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+  .adv-fields.show{display:flex;}
+  .adv-fields select, .adv-fields input{
+    border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 10px; font-size:13px;
+  }
+
+  /* grocery item */
+  .g-item{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line);}
+  .g-item:last-child{border-bottom:none;}
+  .checkbox{
+    width:22px;height:22px;border-radius:7px;border:2px solid var(--line); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; background:var(--paper);
+  }
+  .checkbox.checked{background:var(--success); border-color:var(--success);}
+  .checkbox svg{width:13px;height:13px; stroke:#fff; stroke-width:3; fill:none; opacity:0;}
+  .checkbox.checked svg{opacity:1;}
+  .g-name{flex:1; font-size:14px; font-weight:600;}
+  .g-item.checked .g-name{text-decoration:line-through; color:var(--text-faint);}
+  .g-cat{font-size:10px; font-family:'IBM Plex Mono'; color:var(--text-faint); background:var(--paper); border:1px solid var(--line); padding:2px 7px; border-radius:999px;}
+  .collapse-toggle{background:none;border:none;color:var(--text-soft); font-size:12px; font-family:'IBM Plex Mono'; padding:10px 0 4px; width:100%; text-align:left;}
+
+  /* tasks */
+  .group-label{font-size:11px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.07em; color:var(--text-faint); margin:18px 0 8px;}
+  .group-label:first-child{margin-top:0;}
+  .view-toggle{display:flex; gap:6px; margin-bottom:16px;}
+  .view-toggle button{
+    flex:1; background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:9px; font-size:12px; font-weight:700; color:var(--text-soft);
+  }
+  .view-toggle button.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+  .person-group-head{display:flex; align-items:center; gap:8px; margin:18px 0 8px;}
+  .person-group-head:first-child{margin-top:0;}
+  .person-group-head .name{font-size:13px; font-weight:700;}
+  .t-item{display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--line);}
+  .t-item:last-child{border-bottom:none;}
+  .t-item.done .t-title{text-decoration:line-through; color:var(--text-faint);}
+  .t-title{font-weight:600; font-size:14px;}
+  .t-meta{display:flex; gap:8px; align-items:center; margin-top:5px; flex-wrap:wrap;}
+  .badge{font-size:10px; font-family:'IBM Plex Mono'; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--text-soft);}
+  .badge.overdue{color:#fff; background:var(--overdue); border-color:var(--overdue);}
+  .badge.today{color:#fff; background:var(--today); border-color:var(--today);}
+  .badge.weekly{color:#fff; background:var(--weekly); border-color:var(--weekly);}
+
+  /* calendar */
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .cal-head .month{font-size:19px; font-weight:600;}
+  .cal-nav{display:flex; gap:6px;}
+  .cal-nav button{background:var(--card); border:1px solid var(--line); border-radius:10px; width:34px; height:34px; display:flex; align-items:center; justify-content:center;}
+  .cal-nav button svg{width:16px;height:16px; stroke:var(--ink); fill:none; stroke-width:2;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px;}
+  .cal-dow{text-align:center; font-size:10px; font-family:'IBM Plex Mono'; color:var(--text-faint); padding-bottom:6px;}
+  .cal-cell{
+    aspect-ratio:1; border-radius:10px; background:var(--card); border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; padding:5px 2px; position:relative; font-size:12px; overflow:visible;
+  }
+  .cal-cell.empty-cell{background:transparent; border:none;}
+  .cal-cell.today{border-color:var(--ink); border-width:2px;}
+  .cal-cell.selected{background:var(--ink); color:var(--paper);}
+  .cal-cell .dnum{font-weight:700;}
+  .cal-dots{display:flex; gap:2px; margin-top:3px; flex-wrap:wrap; justify-content:center;}
+  .cal-dots span{width:5px;height:5px;border-radius:50%; display:block;}
+  .trip-bar{position:absolute; left:3px; right:3px; bottom:5px; height:6px; border-radius:4px; pointer-events:none;}
+  .trip-legend{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-soft); margin:10px 2px 0;}
+  .trip-legend span{width:12px;height:6px;border-radius:3px; display:inline-block;}
+  .agenda{margin-top:18px;}
+  .agenda-title{font-size:13px; font-weight:700; margin-bottom:8px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft);}
+  .ev-item{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .ev-item:last-child{border-bottom:none;}
+  .ev-type{font-size:9px; font-family:'IBM Plex Mono'; text-transform:uppercase; padding:2px 7px; border-radius:999px; color:#fff;}
+
+  /* agreement */
+  .ag-section{margin-bottom:14px;}
+  .ag-section .sec-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .ag-section h3{font-size:16px; margin:0;}
+  .ag-body{white-space:pre-wrap; font-size:14px; line-height:1.6; color:var(--text);}
+  .ag-editor{width:100%; min-height:120px; border:1px solid var(--line); border-radius:12px; padding:12px; font-size:14px; line-height:1.6; background:var(--paper); resize:vertical;}
+  .stamp{font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono'; margin-top:6px;}
+
+  /* modal */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(30,43,36,.5); z-index:100; display:flex; align-items:flex-end; justify-content:center;}
+  .modal{
+    background:var(--paper); width:100%; max-width:480px; border-radius:22px 22px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto;
+  }
+  @media (min-width:640px){
+    .modal-backdrop{align-items:center;}
+    .modal{border-radius:20px;}
+  }
+  .modal h3{margin:0 0 16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:11px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft); margin-bottom:6px;}
+  .field input, .field select{
+    width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:11px 12px; font-size:14px;
+  }
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .people-select{display:flex; flex-wrap:wrap; gap:8px;}
+  .person-toggle{
+    display:flex; align-items:center; gap:7px; background:var(--card); border:1.5px solid var(--line);
+    border-radius:999px; padding:7px 14px 7px 7px; font-size:13px; font-weight:600; color:var(--text-soft);
+  }
+  .person-toggle.on{border-color:var(--pc); color:var(--text); background:color-mix(in srgb, var(--pc) 12%, var(--card));}
+  .modal-actions{display:flex; gap:10px; margin-top:8px;}
+  .modal-actions .btn{flex:1;}
+  .fab-row{display:flex; justify-content:flex-end; margin-bottom:14px;}
+
+  /* desktop rail */
+  @media (min-width:720px){
+    nav#tabs{
+      position:sticky; top:0; bottom:auto; flex-direction:column; height:100vh; width:210px;
+      justify-content:flex-start; align-items:stretch; padding:24px 12px; gap:2px;
+    }
+    nav#tabs button{flex-direction:row; justify-content:flex-start; gap:12px; font-size:13px; padding:11px 12px;}
+    #shell{max-width:1080px;}
+    main{padding:28px 40px 60px; max-width:640px;}
+    header{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div id="picker">
+  <div class="people-grid" id="peopleGrid"></div>
+</div>
+
+<div id="app" class="hidden">
+
+
+  <div id="shell">
+    <nav id="tabs">
+      <button data-tab="home" class="active">
+        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span>Home</span>
+      </button>
+      <button data-tab="groceries">
+        <svg viewBox="0 0 24 24"><path d="M6 6h15l-2 9H8L6 6z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1"/><circle cx="16" cy="20" r="1"/></svg>
+        <span>Groceries</span>
+      </button>
+      <button data-tab="tasks">
+        <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span>Tasks</span>
+      </button>
+      <button data-tab="calendar">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Calendar</span>
+      </button>
+      <button data-tab="agreement">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        <span>Agreement</span>
+      </button>
+    </nav>
+
+    <main>
+      <!-- HOME -->
+      <section class="screen active" id="screen-home">
+        <p class="greeting" id="greetText"></p>
+        <p class="greeting-sub">Here's what's going on at the house.</p>
+        <div class="stat-row">
+          <div class="stat"><div class="num" id="statTasks">0</div><div class="lbl">Open tasks</div></div>
+          <div class="stat"><div class="num" id="statGroceries">0</div><div class="lbl">On the list</div></div>
+        </div>
+        <div class="card">
+          <p class="card-title">Due soon</p>
+          <div id="homeTasks"></div>
+        </div>
+        <div class="card">
+          <p class="card-title">Coming up</p>
+          <div id="homeEvents"></div>
+        </div>
+        <div class="card">
+          <p class="card-title">Latest on the list</p>
+          <div id="homeGroceries"></div>
+        </div>
+        <div class="card">
+          <p class="card-title">The House</p>
+          <div class="roster" id="rosterRow"></div>
+        </div>
+      </section>
+
+      <!-- GROCERIES -->
+      <section class="screen" id="screen-groceries">
+        <p class="eyebrow">Shared list</p>
+        <h2>Groceries</h2>
+        <div class="add-bar">
+          <input type="text" id="gInput" placeholder="Add an item…" maxlength="60">
+          <button class="btn" id="gAdd">Add</button>
+        </div>
+        <div class="card">
+          <p class="card-title">Needed</p>
+          <div id="gList"></div>
+        </div>
+        <button class="collapse-toggle" id="gDoneToggle">▸ Recently grabbed (<span id="gDoneCount">0</span>)</button>
+        <div class="card hidden" id="gDoneCard">
+          <div id="gDoneList"></div>
+        </div>
+      </section>
+
+      <!-- TASKS -->
+      <section class="screen" id="screen-tasks">
+        <p class="eyebrow">Keep the place running</p>
+        <h2>Tasks</h2>
+        <div class="add-bar">
+          <input type="text" id="tInput" placeholder="Add a task…" maxlength="60">
+          <button class="btn" id="tAdd">Add</button>
+        </div>
+        <div class="adv-toggle"><button id="tAdvToggle">+ assign / due date</button></div>
+        <div class="adv-fields" id="tAdvFields">
+          <select id="tAssignee"></select>
+          <input type="date" id="tDue">
+          <input type="time" id="tTime" placeholder="Time">
+          <select id="tRecur">
+            <option value="">One-time</option>
+            <option value="weekly">Repeats weekly</option>
+          </select>
+        </div>
+        <div class="view-toggle" id="tViewToggle">
+          <button data-view="date" class="active">By date</button>
+          <button data-view="person">By person</button>
+        </div>
+        <div id="tGroups"></div>
+        <button class="collapse-toggle" id="tDoneToggle">▸ Completed (<span id="tDoneCount">0</span>)</button>
+        <div class="card hidden" id="tDoneCard"><div id="tDoneList"></div></div>
+      </section>
+
+      <!-- CALENDAR -->
+      <section class="screen" id="screen-calendar">
+        <p class="eyebrow">Plans, trips &amp; due dates</p>
+        <h2>Calendar</h2>
+        <div class="fab-row"><button class="btn" id="evAddBtn">+ Add plan</button></div>
+        <div class="card">
+          <div class="cal-head">
+            <div class="month" id="calMonth"></div>
+            <div class="cal-nav">
+              <button id="calPrev"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <button id="calNext"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+          </div>
+          <div class="cal-grid" id="calDow"></div>
+          <div class="cal-grid" id="calGrid" style="margin-top:5px;"></div>
+          <div id="calLegend"></div>
+        </div>
+        <div class="agenda">
+          <p class="agenda-title" id="agendaTitle">Today</p>
+          <div class="card" id="agendaCard"></div>
+        </div>
+      </section>
+
+      <!-- AGREEMENT -->
+      <section class="screen" id="screen-agreement">
+        <p class="eyebrow">The rules everyone signed off on</p>
+        <h2>House Agreement</h2>
+        <div id="agSections"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+const PEOPLE = [
+  {id:'joao', name:'Joao', color:'var(--joao)', hex:'#3B6EA5'},
+  {id:'kylah', name:'Kylah', color:'var(--kylah)', hex:'#D66B90'},
+  {id:'israel', name:'Israel', color:'var(--israel)', hex:'#7B5EA7'},
+  {id:'izzy', name:'Izzy', color:'var(--izzy)', hex:'#4A8F5C'},
+];
+const AG_SECTIONS = [
+  {id:'rules', title:'House Rules'},
+  {id:'chores', title:'Chores & Rotation'},
+  {id:'money', title:'Rent & Bills'},
+  {id:'guests', title:'Guests & Quiet Hours'},
+];
+const EVENT_TYPES = {plan:{label:'Plan', color:'#3C8C86'}, trip:{label:'Trip', color:'#C6455B'}, reminder:{label:'Reminder', color:'#D9A234'}};
+
+let state = { currentUser:null, groceries:[], tasks:[], events:[], agreement:{} };
+let calCursor = new Date();
+let selectedDay = fmt(new Date());
+
+function personOf(id){ return PEOPLE.find(p=>p.id===id); }
+function fmt(d){ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function todayStr(){ return fmt(new Date()); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function niceDate(iso){
+  if(!iso) return '';
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short', day:'numeric'});
+}
+function niceTime(hhmm){
+  if(!hhmm) return '';
+  const [h,min] = hhmm.split(':').map(Number);
+  const d = new Date(); d.setHours(h,min,0,0);
+  return d.toLocaleTimeString('en-US',{hour:'numeric', minute: min? '2-digit':undefined});
+}
+
+/* ---------------- storage (Supabase) ---------------- */
+const sb = window.supabase.createClient(window.HOUSE_CONFIG.SUPABASE_URL, window.HOUSE_CONFIG.SUPABASE_ANON_KEY);
+
+async function loadKey(key, fallback){
+  try{
+    const { data, error } = await sb.from('house_data').select('value').eq('key', key).maybeSingle();
+    if(error || !data) return fallback;
+    return data.value ?? fallback;
+  }catch(e){ console.error('load failed', key, e); return fallback; }
+}
+async function saveKey(key, value){
+  try{
+    const { error } = await sb.from('house_data').upsert({ key, value, updated_at: new Date().toISOString() });
+    if(error) console.error('save failed', key, error);
+  }catch(e){ console.error('save failed', key, e); }
+}
+async function loadAll(){
+  state.groceries = await loadKey('house:groceries', []);
+  state.tasks = await loadKey('house:tasks', []);
+  state.events = dedupeEvents(await loadKey('house:events', []));
+  state.agreement = await loadKey('house:agreement', {});
+}
+function dedupeEvents(list){
+  const seen = new Set();
+  const cleaned = [];
+  list.forEach(e=>{
+    const key = [e.title, e.date, e.endDate, e.type].join('|');
+    if(!seen.has(key)){ seen.add(key); cleaned.push(e); }
+  });
+  if(cleaned.length !== list.length) saveKey('house:events', cleaned);
+  return cleaned;
+}
+let syncing = false;
+function subscribeLive(){
+  sb.channel('house-data-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'house_data'}, async ()=>{
+      if(syncing) return;
+      syncing = true;
+      await loadAll();
+      renderAll();
+      syncing = false;
+    })
+    .subscribe();
+}
+
+/* ---------------- identity (locked permanently once chosen, per device) ---------------- */
+function getSavedIdentity(){
+  try{ return localStorage.getItem('house-identity'); }catch(e){ return null; }
+}
+function lockIdentity(id){
+  state.currentUser = id;
+  try{ localStorage.setItem('house-identity', id); }catch(e){}
+}
+function buildPicker(){
+  const grid = document.getElementById('peopleGrid');
+  grid.innerHTML = PEOPLE.map(p=>`
+    <button class="person-btn" style="background:${p.hex}" data-id="${p.id}">
+      <span class="initial">${p.name[0]}</span>${p.name}
+    </button>`).join('');
+  grid.querySelectorAll('.person-btn').forEach(btn=>{
+    btn.addEventListener('click', async ()=>{
+      lockIdentity(btn.dataset.id);
+      document.getElementById('picker').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      await loadAll();
+      applyIdentity();
+      renderAll();
+      subscribeLive();
+    });
+  });
+}
+function applyIdentity(){
+  const p = personOf(state.currentUser);
+  document.getElementById('greetText').textContent = 'Hey ' + p.name;
+  document.getElementById('tAssignee').innerHTML =
+    '<option value="everyone">Everyone</option>' + PEOPLE.map(pp=>`<option value="${pp.id}">${pp.name}</option>`).join('');
+}
+async function initIdentity(){
+  const saved = getSavedIdentity();
+  if(saved && personOf(saved)){
+    state.currentUser = saved;
+    document.getElementById('picker').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    await loadAll();
+    applyIdentity();
+    renderAll();
+    subscribeLive();
+  } else {
+    buildPicker();
+  }
+}
+
+/* ---------------- tabs ---------------- */
+document.querySelectorAll('#tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------------- HOME ---------------- */
+function renderHome(){
+  document.getElementById('rosterRow').innerHTML = PEOPLE.map(p=>{
+    const count = state.tasks.filter(t=>!t.done && t.assignee===p.id).length;
+    return `<button class="chip" data-gotoperson="${p.id}"><span class="dot-sm" style="background:${p.hex}">${p.name[0]}</span>${p.name}${count?`<span class="chip-count">${count}</span>`:''}</button>`;
+  }).join('');
+  document.querySelectorAll('[data-gotoperson]').forEach(c=> c.onclick = ()=>{
+    document.querySelector('#tabs [data-tab="tasks"]').click();
+    taskView = 'person'; personFilter = c.dataset.gotoperson;
+    renderTasks();
+  });
+
+  const openTasks = state.tasks.filter(t=>!t.done);
+  document.getElementById('statTasks').textContent = openTasks.length;
+  document.getElementById('statGroceries').textContent = state.groceries.filter(g=>!g.checked).length;
+
+  const soon = openTasks.filter(t=>t.due).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,4);
+  document.getElementById('homeTasks').innerHTML = soon.length ? soon.map(taskRowHTML).join('') :
+    `<div class="empty">Nothing due — add a task to get it rolling.</div>`;
+
+  const upcoming = [...state.events].sort((a,b)=>a.date.localeCompare(b.date)).filter(e=>e.date>=todayStr()).slice(0,4);
+  document.getElementById('homeEvents').innerHTML = upcoming.length ? upcoming.map(evRowHTML).join('') :
+    `<div class="empty">No plans yet — add a trip or hangout on the Calendar tab.</div>`;
+
+  const latest = [...state.groceries].filter(g=>!g.checked).slice(-4).reverse();
+  document.getElementById('homeGroceries').innerHTML = latest.length ? latest.map(g=>{
+    const p = personOf(g.addedBy);
+    return `<div class="list-row"><span class="dot-sm" style="background:${p?p.hex:'#999'}">${p?p.name[0]:'?'}</span><span class="rtitle">${escapeHtml(g.name)}</span></div>`;
+  }).join('') : `<div class="empty">List's empty — nice.</div>`;
+}
+function taskRowHTML(t){
+  const p = t.assignee==='everyone' ? null : personOf(t.assignee);
+  const badge = badgeFor(t.due, t.time);
+  return `<div class="list-row">
+    <span class="dot-sm" style="background:${p?p.hex:'#8B8672'}">${p?p.name[0]:'H'}</span>
+    <span class="rtitle">${escapeHtml(t.title)}</span>
+    ${badge}
+  </div>`;
+}
+function attendeeDotsHTML(e){
+  const ids = (e.attendees && e.attendees.length) ? e.attendees : [];
+  if(!ids.length) return '';
+  return `<span class="attendee-dots">${ids.map(id=>{ const p=personOf(id); return p?`<span class="dot-sm" style="background:${p.hex}">${p.name[0]}</span>`:''; }).join('')}</span>`;
+}
+function evRowHTML(e){
+  const type = EVENT_TYPES[e.type]||EVENT_TYPES.plan;
+  return `<div class="list-row">
+    <span class="ev-type" style="background:${type.color}">${type.label}</span>
+    <span class="rtitle">${escapeHtml(e.title)}</span>
+    ${attendeeDotsHTML(e)}
+    <span class="rmeta">${niceDate(e.date)}${e.time?' · '+niceTime(e.time):''}</span>
+  </div>`;
+}
+function badgeFor(due, time){
+  if(!due) return '';
+  const t = time ? ' · '+niceTime(time) : '';
+  if(due < todayStr()) return `<span class="badge overdue">overdue${t}</span>`;
+  if(due === todayStr()) return `<span class="badge today">today${t}</span>`;
+  return `<span class="badge">${niceDate(due)}${t}</span>`;
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- GROCERIES ---------------- */
+document.getElementById('gAdd').addEventListener('click', addGrocery);
+document.getElementById('gInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addGrocery(); });
+async function addGrocery(){
+  const input = document.getElementById('gInput');
+  const name = input.value.trim();
+  if(!name) return;
+  state.groceries.push({id:uid(), name, checked:false, addedBy:state.currentUser, addedAt:Date.now()});
+  input.value='';
+  renderGroceries(); renderHome();
+  saveKey('house:groceries', state.groceries);
+}
+function toggleGrocery(id){
+  const g = state.groceries.find(x=>x.id===id);
+  if(g){ g.checked = !g.checked; renderGroceries(); renderHome(); saveKey('house:groceries', state.groceries); }
+}
+function deleteGrocery(id){
+  state.groceries = state.groceries.filter(x=>x.id!==id);
+  renderGroceries(); renderHome();
+  saveKey('house:groceries', state.groceries);
+}
+function renderGroceries(){
+  const need = state.groceries.filter(g=>!g.checked);
+  const done = state.groceries.filter(g=>g.checked);
+  document.getElementById('gList').innerHTML = need.length ? need.map(gItemHTML).join('') : `<div class="empty">Nothing needed right now — add something above.</div>`;
+  document.getElementById('gDoneList').innerHTML = done.map(gItemHTML).join('');
+  document.getElementById('gDoneCount').textContent = done.length;
+  attachGroceryHandlers();
+}
+function gItemHTML(g){
+  const p = personOf(g.addedBy);
+  return `<div class="g-item ${g.checked?'checked':''}" data-id="${g.id}">
+    <button class="checkbox ${g.checked?'checked':''}" data-check="${g.id}"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></button>
+    <span class="g-name">${escapeHtml(g.name)}</span>
+    <span class="dot-sm" style="background:${p?p.hex:'#999'}" title="${p?p.name:''}">${p?p.name[0]:'?'}</span>
+    <button class="del" data-del="${g.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>`;
+}
+function attachGroceryHandlers(){
+  document.querySelectorAll('[data-check]').forEach(b=> b.onclick = ()=>toggleGrocery(b.dataset.check));
+  document.querySelectorAll('#gList [data-del], #gDoneList [data-del]').forEach(b=> b.onclick = ()=>deleteGrocery(b.dataset.del));
+}
+document.getElementById('gDoneToggle').addEventListener('click', ()=>{
+  const card = document.getElementById('gDoneCard');
+  card.classList.toggle('hidden');
+  document.getElementById('gDoneToggle').firstChild.textContent = card.classList.contains('hidden') ? '▸ ' : '▾ ';
+});
+
+/* ---------------- TASKS ---------------- */
+document.getElementById('tAdvToggle').addEventListener('click', ()=>{
+  document.getElementById('tAdvFields').classList.toggle('show');
+});
+document.getElementById('tAdd').addEventListener('click', addTask);
+document.getElementById('tInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTask(); });
+function addTask(){
+  const input = document.getElementById('tInput');
+  const title = input.value.trim();
+  if(!title) return;
+  const assignee = document.getElementById('tAssignee').value || 'everyone';
+  const due = document.getElementById('tDue').value || null;
+  const time = document.getElementById('tTime').value || null;
+  const recur = document.getElementById('tRecur').value || null;
+  state.tasks.push({id:uid(), title, assignee, due, time, recur, done:false, addedBy:state.currentUser});
+  input.value=''; document.getElementById('tDue').value=''; document.getElementById('tTime').value='';
+  renderTasks(); renderHome(); renderCalendar();
+  saveKey('house:tasks', state.tasks);
+}
+function toggleTask(id){
+  const t = state.tasks.find(x=>x.id===id);
+  if(t){ t.done = !t.done; renderTasks(); renderHome(); renderCalendar(); saveKey('house:tasks', state.tasks); }
+}
+function deleteTask(id){
+  state.tasks = state.tasks.filter(x=>x.id!==id);
+  renderTasks(); renderHome(); renderCalendar();
+  saveKey('house:tasks', state.tasks);
+}
+let taskView = 'date';
+let personFilter = null;
+document.getElementById('tViewToggle').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  taskView = btn.dataset.view;
+  document.querySelectorAll('#tViewToggle button').forEach(b=>b.classList.toggle('active', b===btn));
+  renderTasks();
+});
+function renderTasks(){
+  const open = state.tasks.filter(t=>!t.done);
+  const done = state.tasks.filter(t=>t.done);
+  document.querySelectorAll('#tViewToggle button').forEach(b=>b.classList.toggle('active', b.dataset.view===taskView));
+
+  let html = '';
+  if(taskView === 'person'){
+    const buckets = [...PEOPLE, {id:'everyone', name:'Everyone', hex:'#8B8672'}];
+    buckets.forEach(p=>{
+      const mine = open.filter(t=>t.assignee===p.id).sort((a,b)=>(a.due||'').localeCompare(b.due||''));
+      if(!mine.length) return;
+      html += `<div class="person-group-head" id="pgroup-${p.id}"><span class="dot-sm" style="background:${p.hex}">${p.name[0]}</span><span class="name">${p.name} · ${mine.length}</span></div>`;
+      html += mine.map(fullTaskHTML).join('');
+    });
+    if(!html) html = `<div class="empty">No open tasks — add one above.</div>`;
+  } else {
+    const groups = {overdue:[], today:[], week:[], later:[], none:[]};
+    const week = new Date(); week.setDate(week.getDate()+7);
+    const weekStr = fmt(week);
+    open.forEach(t=>{
+      if(!t.due) groups.none.push(t);
+      else if(t.due < todayStr()) groups.overdue.push(t);
+      else if(t.due === todayStr()) groups.today.push(t);
+      else if(t.due <= weekStr) groups.week.push(t);
+      else groups.later.push(t);
+    });
+    const labels = {overdue:'Overdue', today:'Today', week:'This week', later:'Later', none:'No date'};
+    Object.keys(labels).forEach(k=>{
+      if(groups[k].length){
+        html += `<div class="group-label">${labels[k]}</div>`;
+        html += groups[k].sort((a,b)=>(a.due||'').localeCompare(b.due||'')).map(fullTaskHTML).join('');
+      }
+    });
+    if(!html) html = `<div class="empty">No open tasks — add one above.</div>`;
+  }
+  document.getElementById('tGroups').innerHTML = html;
+  document.getElementById('tDoneList').innerHTML = done.map(fullTaskHTML).join('');
+  document.getElementById('tDoneCount').textContent = done.length;
+  attachTaskHandlers();
+  if(personFilter){
+    document.getElementById('pgroup-'+personFilter)?.scrollIntoView({block:'center'});
+    personFilter = null;
+  }
+}
+function fullTaskHTML(t){
+  const p = t.assignee==='everyone'?null:personOf(t.assignee);
+  return `<div class="t-item ${t.done?'done':''}">
+    <button class="checkbox ${t.done?'checked':''}" data-tcheck="${t.id}"><svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></button>
+    <div style="flex:1">
+      <div class="t-title">${escapeHtml(t.title)}</div>
+      <div class="t-meta">
+        <span class="badge" style="background:${p?p.hex:'#8B8672'}; color:#fff; border-color:transparent;">${p?p.name:'Everyone'}</span>
+        ${t.due ? badgeFor(t.due, t.time) : ''}
+        ${t.recur ? '<span class="badge weekly">weekly</span>' : ''}
+      </div>
+    </div>
+    <button class="del" data-tdel="${t.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>`;
+}
+function attachTaskHandlers(){
+  document.querySelectorAll('[data-tcheck]').forEach(b=> b.onclick = ()=>toggleTask(b.dataset.tcheck));
+  document.querySelectorAll('[data-tdel]').forEach(b=> b.onclick = ()=>deleteTask(b.dataset.tdel));
+}
+document.getElementById('tDoneToggle').addEventListener('click', ()=>{
+  const card = document.getElementById('tDoneCard');
+  card.classList.toggle('hidden');
+  document.getElementById('tDoneToggle').firstChild.textContent = card.classList.contains('hidden') ? '▸ ' : '▾ ';
+});
+
+/* ---------------- CALENDAR ---------------- */
+document.getElementById('calPrev').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCalendar(); });
+document.getElementById('calNext').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCalendar(); });
+document.getElementById('evAddBtn').addEventListener('click', openEventModal);
+
+function dayItems(dateStr){
+  const evs = state.events.filter(e=> dateStr >= e.date && dateStr <= (e.endDate||e.date));
+  const tks = state.tasks.filter(t=> t.due === dateStr);
+  return {evs, tks};
+}
+function renderCalendar(){
+  const dow = ['S','M','T','W','T','F','S'];
+  document.getElementById('calDow').innerHTML = dow.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  document.getElementById('calMonth').textContent = calCursor.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+  const first = new Date(y,m,1);
+  const startOffset = first.getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  let cells = '';
+  let hasTripThisMonth = false;
+  for(let i=0;i<startOffset;i++) cells += `<div class="cal-cell empty-cell"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = fmt(new Date(y,m,d));
+    const {evs,tks} = dayItems(dateStr);
+    const trips = evs.filter(e=>e.type==='trip');
+    const others = evs.filter(e=>e.type!=='trip');
+    const dots = [...others.map(e=>EVENT_TYPES[e.type]?.color||'#999'), ...tks.map(t=> t.assignee==='everyone' ? '#8B8672' : (personOf(t.assignee)?.hex||'#999'))].slice(0,4);
+    const cls = ['cal-cell'];
+    if(dateStr===todayStr()) cls.push('today');
+    if(dateStr===selectedDay) cls.push('selected');
+    let tripBars = '';
+    trips.forEach(trip=>{
+      hasTripThisMonth = true;
+      tripBars += `<span class="trip-bar" style="background:${EVENT_TYPES.trip.color};"></span>`;
+    });
+    cells += `<button class="${cls.join(' ')}" data-day="${dateStr}">
+      <span class="dnum">${d}</span>
+      <span class="cal-dots">${dots.map(c=>`<span style="background:${c}"></span>`).join('')}</span>
+      ${tripBars}
+    </button>`;
+  }
+  document.getElementById('calGrid').innerHTML = cells;
+  document.getElementById('calLegend').innerHTML = hasTripThisMonth
+    ? `<div class="trip-legend"><span style="background:${EVENT_TYPES.trip.color}"></span> trip in progress</div>` : '';
+  document.querySelectorAll('[data-day]').forEach(c=> c.onclick = ()=>{ selectedDay = c.dataset.day; renderCalendar(); renderAgenda(); });
+  renderAgenda();
+}
+function renderAgenda(){
+  const isToday = selectedDay === todayStr();
+  document.getElementById('agendaTitle').textContent = isToday ? 'Today' : new Date(selectedDay+'T00:00:00').toLocaleDateString('en-US',{weekday:'long', month:'short', day:'numeric'});
+  const {evs, tks} = dayItems(selectedDay);
+  let html = '';
+  evs.forEach(e=>{
+    const type = EVENT_TYPES[e.type]||EVENT_TYPES.plan;
+    const range = (e.type==='trip' && e.endDate && e.endDate!==e.date) ? ` <span class="rmeta">${niceDate(e.date)} – ${niceDate(e.endDate)}</span>` : (e.time ? ` <span class="rmeta">${niceTime(e.time)}</span>` : '');
+    html += `<div class="ev-item"><span class="ev-type" style="background:${type.color}">${type.label}</span>
+      <span class="rtitle">${escapeHtml(e.title)}${range}</span>
+      ${attendeeDotsHTML(e)}
+      <button class="del" data-evdel="${e.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
+  });
+  tks.forEach(t=>{
+    const p = t.assignee==='everyone'?null:personOf(t.assignee);
+    html += `<div class="ev-item"><span class="ev-type" style="background:#8B8672">Task</span>
+      <span class="rtitle">${escapeHtml(t.title)}${t.time?` <span class="rmeta">${niceTime(t.time)}</span>`:''}</span>
+      <span class="dot-sm" style="background:${p?p.hex:'#8B8672'}">${p?p.name[0]:'H'}</span>
+      <button class="del" data-agtdel="${t.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button></div>`;
+  });
+  document.getElementById('agendaCard').innerHTML = html || `<div class="empty">Nothing on this day.</div>`;
+  document.querySelectorAll('[data-evdel]').forEach(b=> b.onclick = ()=>deleteEvent(b.dataset.evdel));
+  document.querySelectorAll('[data-agtdel]').forEach(b=> b.onclick = ()=>deleteTask(b.dataset.agtdel));
+}
+function deleteEvent(id){
+  state.events = state.events.filter(x=>x.id!==id);
+  renderCalendar(); renderHome();
+  saveKey('house:events', state.events);
+}
+function openEventModal(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-backdrop" id="mBack">
+      <div class="modal">
+        <h3>Add a plan</h3>
+        <div class="field"><label>Title</label><input type="text" id="mTitle" placeholder="Beach weekend, dinner, movers…" maxlength="60"></div>
+        <div class="field-row">
+          <div class="field"><label>Starts</label><input type="date" id="mStart" value="${selectedDay}"></div>
+          <div class="field"><label>Ends (optional)</label><input type="date" id="mEnd"></div>
+        </div>
+        <div class="field"><label>Time (optional)</label><input type="time" id="mTime"></div>
+        <div class="field"><label>Type</label>
+          <select id="mType"><option value="plan">Plan / hangout</option><option value="trip">Trip</option><option value="reminder">Reminder</option></select>
+        </div>
+        <div class="field"><label>Who's going</label>
+          <div class="people-select" id="mPeople">
+            ${PEOPLE.map(p=>`<button type="button" class="person-toggle" data-person="${p.id}" style="--pc:${p.hex}"><span class="dot-sm" style="background:${p.hex}">${p.name[0]}</span>${p.name}</button>`).join('')}
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="mCancel">Cancel</button>
+          <button class="btn" id="mSave">Save</button>
+        </div>
+      </div>
+    </div>`;
+  document.querySelectorAll('.person-toggle').forEach(b=> b.onclick = ()=> b.classList.toggle('on'));
+  document.getElementById('mCancel').onclick = ()=> root.innerHTML='';
+  document.getElementById('mBack').onclick = (e)=>{ if(e.target.id==='mBack') root.innerHTML=''; };
+  document.getElementById('mSave').onclick = ()=>{
+    const saveBtn = document.getElementById('mSave');
+    if(saveBtn.disabled) return;
+    const title = document.getElementById('mTitle').value.trim();
+    if(!title) return;
+    saveBtn.disabled = true;
+    const date = document.getElementById('mStart').value || selectedDay;
+    const endDate = document.getElementById('mEnd').value || null;
+    const time = document.getElementById('mTime').value || null;
+    const type = document.getElementById('mType').value;
+    const attendees = [...document.querySelectorAll('.person-toggle.on')].map(b=>b.dataset.person);
+    state.events.push({id:uid(), title, date, endDate, time, type, attendees, addedBy:state.currentUser});
+    root.innerHTML='';
+    renderCalendar(); renderHome();
+    saveKey('house:events', state.events);
+  };
+}
+
+/* ---------------- AGREEMENT ---------------- */
+function renderAgreement(){
+  const root = document.getElementById('agSections');
+  root.innerHTML = AG_SECTIONS.map(sec=>{
+    const data = state.agreement[sec.id] || {text:'', updatedBy:null, updatedAt:null};
+    const p = data.updatedBy ? personOf(data.updatedBy) : null;
+    return `<div class="card ag-section" data-sec="${sec.id}">
+      <div class="sec-head">
+        <h3>${sec.title}</h3>
+        <button class="btn small ghost" data-edit="${sec.id}">Edit</button>
+      </div>
+      <div class="ag-view">
+        <div class="ag-body">${data.text ? escapeHtml(data.text) : '<span class="empty">Nothing written yet — add the ground rules.</span>'}</div>
+        ${data.updatedAt ? `<div class="stamp">Last edited by ${p?p.name:'someone'} · ${new Date(data.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> editSection(b.dataset.edit));
+}
+function editSection(secId){
+  const card = document.querySelector(`[data-sec="${secId}"]`);
+  const data = state.agreement[secId] || {text:''};
+  const view = card.querySelector('.ag-view');
+  view.innerHTML = `
+    <textarea class="ag-editor" id="edit-${secId}">${data.text||''}</textarea>
+    <div class="modal-actions" style="margin-top:10px;">
+      <button class="btn ghost" id="cancel-${secId}">Cancel</button>
+      <button class="btn" id="save-${secId}">Save</button>
+    </div>`;
+  document.getElementById('cancel-'+secId).onclick = renderAgreement;
+  document.getElementById('save-'+secId).onclick = ()=>{
+    const text = document.getElementById('edit-'+secId).value;
+    state.agreement[secId] = {text, updatedBy: state.currentUser, updatedAt: Date.now()};
+    renderAgreement();
+    saveKey('house:agreement', state.agreement);
+  };
+}
+
+/* ---------------- render all ---------------- */
+function renderAll(){
+  renderHome();
+  renderGroceries();
+  renderTasks();
+  renderCalendar();
+  renderAgreement();
+}
+
+initIdentity();
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('/sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
