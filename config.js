@@ -1,6 +1,4 @@
-// Fill these in with your own Supabase project's values.
-// Settings → API in your Supabase project dashboard.
 window.HOUSE_CONFIG = {
-  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR-ANON-PUBLIC-KEY"
+  SUPABASE_URL: "https://ftgjsckmmdjsswhqrcqd.supabase.co",
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0Z2pzY2ttbWRqc3N3aHFyY3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTU5MTgsImV4cCI6MjEwMTg5MTkxOH0.8U4jDSep9tX0tzAfv3_LVIpc4eRZ6cde0Vib-6KL-jI"
 };
