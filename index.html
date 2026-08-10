@@ -158,7 +158,7 @@
 
   .list-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
   .list-row:last-child{border-bottom:none;}
-  .row-link{flex:1; display:flex; align-items:center; gap:10px; min-width:0; text-align:left; background:none; border:none; border-radius:8px; margin:-6px; padding:6px;}
+  .row-link{flex:1; display:flex; align-items:center; gap:10px; min-width:0; text-align:left; background:none; border:none; border-radius:8px; margin:-6px; padding:6px; color:var(--text);}
   .row-link:active{background:var(--paper);}
   .rtitle{font-weight:600; font-size:14px; flex:1;}
   .del{background:var(--paper); border:1px solid var(--line); border-radius:10px; color:var(--text-soft); padding:9px; margin-left:auto; flex-shrink:0;}
@@ -241,6 +241,7 @@
   .cal-cell{
     aspect-ratio:1; border-radius:10px; background:var(--card); border:1px solid var(--line);
     display:flex; flex-direction:column; align-items:center; padding:5px 2px; position:relative; font-size:12px; overflow:visible;
+    color:var(--text);
   }
   .cal-cell.empty-cell{background:transparent; border:none;}
   .cal-cell.today{border-color:var(--ink); border-width:2px;}
