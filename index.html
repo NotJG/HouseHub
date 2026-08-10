@@ -107,7 +107,7 @@
   nav#tabs button svg{width:20px;height:20px; stroke:currentColor; fill:none; stroke-width:1.8;}
   nav#tabs button.active{color:var(--paper);}
   nav#tabs button.active .tab-chip{background:rgba(247,243,232,.12);}
-  main{flex:1; padding:18px 18px 100px; width:100%;}
+  main{flex:1; padding:calc(18px + env(safe-area-inset-top)) 18px 100px; width:100%;}
 
   section.screen{display:none; animation:fadeIn .25s ease;}
   section.screen.active{display:block;}
@@ -903,15 +903,17 @@ function openEventModal(){
 }
 
 /* ---------------- AGREEMENT ---------------- */
+const AG_EDITORS = ['joao', 'kylah'];
 function renderAgreement(){
   const root = document.getElementById('agSections');
+  const canEdit = AG_EDITORS.includes(state.currentUser);
   root.innerHTML = AG_SECTIONS.map(sec=>{
     const data = state.agreement[sec.id] || {text:'', updatedBy:null, updatedAt:null};
     const p = data.updatedBy ? personOf(data.updatedBy) : null;
     return `<div class="card ag-section" data-sec="${sec.id}">
       <div class="sec-head">
         <h3>${sec.title}</h3>
-        <button class="btn small ghost" data-edit="${sec.id}">Edit</button>
+        ${canEdit ? `<button class="btn small ghost" data-edit="${sec.id}">Edit</button>` : ''}
       </div>
       <div class="ag-view">
         <div class="ag-body">${data.text ? escapeHtml(data.text) : '<span class="empty">Nothing written yet — add the ground rules.</span>'}</div>
@@ -919,9 +921,13 @@ function renderAgreement(){
       </div>
     </div>`;
   }).join('');
+  if(!canEdit){
+    root.insertAdjacentHTML('afterbegin', `<div class="empty" style="margin-bottom:14px;">Only Joao or Kylah can edit the agreement.</div>`);
+  }
   document.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=> editSection(b.dataset.edit));
 }
 function editSection(secId){
+  if(!AG_EDITORS.includes(state.currentUser)) return;
   const card = document.querySelector(`[data-sec="${secId}"]`);
   const data = state.agreement[secId] || {text:''};
   const view = card.querySelector('.ag-view');
