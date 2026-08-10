@@ -127,6 +127,10 @@
   .greeting{font-size:28px; margin:0 0 2px;}
   .greeting-sub{color:var(--text-soft); margin:0 0 20px; font-size:14px;}
   .stat-row{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px;}
+  .reset-link{
+    display:block; width:100%; text-align:center; background:none; border:none;
+    color:var(--text-faint); font-size:11px; font-family:'IBM Plex Mono'; padding:18px 0 6px;
+  }
   .stat{background:var(--ink); color:var(--paper); border-radius:14px; padding:12px 10px;}
   .stat .num{font-family:'Fraunces'; font-size:24px; font-weight:600; line-height:1;}
   .stat .lbl{font-size:9px; color:#A9B7AE; text-transform:uppercase; letter-spacing:.04em; font-family:'IBM Plex Mono'; margin-top:4px;}
@@ -344,6 +348,7 @@
           <p class="card-title">The House</p>
           <div class="roster" id="rosterRow"></div>
         </div>
+        <button id="resetIdentityBtn" class="reset-link">Picked the wrong name? Reset this device</button>
       </section>
 
       <!-- GROCERIES -->
@@ -564,6 +569,12 @@ document.querySelectorAll('#tabs button').forEach(btn=>{
 });
 
 /* ---------------- HOME ---------------- */
+document.getElementById('resetIdentityBtn').addEventListener('click', ()=>{
+  if(confirm('Reset who this device belongs to? You\'ll be asked to pick a name again.')){
+    try{ localStorage.removeItem('house-identity'); }catch(e){}
+    location.reload();
+  }
+});
 function renderHome(){
   document.getElementById('rosterRow').innerHTML = PEOPLE.map(p=>{
     const count = state.tasks.filter(t=>!t.done && t.assignee===p.id).length;
