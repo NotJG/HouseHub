@@ -277,7 +277,8 @@
   .stamp{font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono'; margin-top:6px;}
 
   /* modal */
-  .modal-backdrop{position:fixed; inset:0; background:rgba(30,43,36,.5); z-index:100; display:flex; align-items:flex-end; justify-content:center;}
+  nav#tabs.modal-open{display:none;}
+  .modal-backdrop{position:fixed; inset:0; height:100dvh; background:rgba(30,43,36,.5); z-index:200; display:flex; align-items:flex-end; justify-content:center;}
   .modal{
     background:var(--paper); width:100%; max-width:480px; border-radius:22px 22px 0 0;
     padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto;
@@ -921,6 +922,8 @@ function deleteEvent(id){
 }
 function openEventModal(){
   const root = document.getElementById('modalRoot');
+  document.getElementById('tabs').classList.add('modal-open');
+  function closeModal(){ root.innerHTML=''; document.getElementById('tabs').classList.remove('modal-open'); }
   root.innerHTML = `
     <div class="modal-backdrop" id="mBack">
       <div class="modal">
@@ -946,8 +949,8 @@ function openEventModal(){
       </div>
     </div>`;
   document.querySelectorAll('.person-toggle').forEach(b=> b.onclick = ()=> b.classList.toggle('on'));
-  document.getElementById('mCancel').onclick = ()=> root.innerHTML='';
-  document.getElementById('mBack').onclick = (e)=>{ if(e.target.id==='mBack') root.innerHTML=''; };
+  document.getElementById('mCancel').onclick = closeModal;
+  document.getElementById('mBack').onclick = (e)=>{ if(e.target.id==='mBack') closeModal(); };
   document.getElementById('mSave').onclick = ()=>{
     const saveBtn = document.getElementById('mSave');
     if(saveBtn.disabled) return;
@@ -967,11 +970,12 @@ function openEventModal(){
     const type = document.getElementById('mType').value;
     const attendees = [...document.querySelectorAll('.person-toggle.on')].map(b=>b.dataset.person);
     state.events.push({id:uid(), title, date, endDate, time, type, attendees, addedBy:state.currentUser});
-    root.innerHTML='';
+    closeModal();
     renderCalendar(); renderHome();
     saveKey('house:events', state.events);
   };
 }
+
 
 /* ---------------- AGREEMENT ---------------- */
 const AG_EDITORS = ['joao', 'kylah'];
