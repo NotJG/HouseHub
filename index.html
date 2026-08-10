@@ -196,8 +196,11 @@
   .mini-field{min-width:0;}
   .mini-field label{display:block; font-size:10px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); margin-bottom:4px;}
   .adv-fields select, .adv-fields input{
-    width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 10px; font-size:16px;
+    width:100%; max-width:100%; box-sizing:border-box; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 10px; font-size:16px;
     color:var(--text); -webkit-text-fill-color:var(--text);
+  }
+  .adv-fields input[type=date], .adv-fields input[type=time]{
+    -webkit-appearance:none; appearance:none; min-height:44px;
   }
 
   /* grocery item */
@@ -287,8 +290,11 @@
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:11px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft); margin-bottom:6px;}
   .field input, .field select{
-    width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:11px 12px; font-size:16px;
+    width:100%; max-width:100%; box-sizing:border-box; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:11px 12px; font-size:16px;
     color:var(--text); -webkit-text-fill-color:var(--text);
+  }
+  .field input[type=date], .field input[type=time]{
+    -webkit-appearance:none; appearance:none; min-height:44px;
   }
   .field-row{display:flex; flex-direction:column; gap:10px;}
   .field-row .field{flex:1; min-width:0;}
