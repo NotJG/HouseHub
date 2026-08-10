@@ -38,15 +38,17 @@
     --shadow: 0 1px 2px rgba(30,43,36,.06), 0 4px 14px rgba(30,43,36,.05);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html{background:var(--ink); overscroll-behavior-y:none; touch-action:pan-y; overflow-x:hidden;}
-  html,body{margin:0;padding:0;height:100%; overscroll-behavior-y:none;}
+  html{background:var(--ink); overflow:hidden; touch-action:pan-y;}
+  html,body{margin:0;padding:0;height:100%;}
   body{
-    background:var(--paper);
+    background:var(--ink);
     color:var(--text);
     font-family:'Manrope',system-ui,sans-serif;
     -webkit-font-smoothing:antialiased;
-    overflow-x:hidden;
+    overflow:hidden;
     max-width:100vw;
+    position:fixed;
+    inset:0;
   }
   h1,h2,h3,.display{font-family:'Fraunces',serif;}
   .mono{font-family:'IBM Plex Mono',monospace; letter-spacing:.01em;}
@@ -64,7 +66,11 @@
   }
 
   /* ---------- App shell ---------- */
-  #app{min-height:100vh; display:flex; flex-direction:column;}
+  #app{
+    height:100%; display:flex; flex-direction:column;
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    background:var(--paper);
+  }
   .hidden{display:none !important;}
 
   /* ---------- Person picker ---------- */
@@ -185,8 +191,8 @@
 
   .adv-toggle{display:flex; justify-content:flex-end; margin:-10px 0 12px;}
   .adv-toggle button{background:none;border:none;color:var(--text-soft);font-size:12px;text-decoration:underline; font-family:'IBM Plex Mono';}
-  .adv-fields{display:none; gap:8px; margin-bottom:10px;}
-  .adv-fields.show{display:grid; grid-template-columns:1fr 1fr;}
+  .adv-fields{display:none; flex-direction:column; gap:8px; margin-bottom:10px;}
+  .adv-fields.show{display:flex;}
   .mini-field{min-width:0;}
   .mini-field label{display:block; font-size:10px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); margin-bottom:4px;}
   .adv-fields select, .adv-fields input{
@@ -273,9 +279,6 @@
     background:var(--paper); width:100%; max-width:480px; border-radius:22px 22px 0 0;
     padding:22px 20px calc(22px + env(safe-area-inset-bottom)); max-height:85vh; overflow-y:auto;
   }
-  @media (max-width:360px){
-    .field-row{flex-direction:column;}
-  }
   @media (min-width:640px){
     .modal-backdrop{align-items:center;}
     .modal{border-radius:20px;}
@@ -287,7 +290,7 @@
     width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:11px 12px; font-size:16px;
     color:var(--text); -webkit-text-fill-color:var(--text);
   }
-  .field-row{display:flex; gap:10px;}
+  .field-row{display:flex; flex-direction:column; gap:10px;}
   .field-row .field{flex:1; min-width:0;}
   .people-select{display:flex; flex-wrap:wrap; gap:8px;}
   .person-toggle{
