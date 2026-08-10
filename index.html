@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
 <meta name="theme-color" content="#1E2B24">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -37,7 +38,8 @@
     --shadow: 0 1px 2px rgba(30,43,36,.06), 0 4px 14px rgba(30,43,36,.05);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;height:100%;}
+  html{background:var(--ink); overscroll-behavior-y:none; touch-action:pan-y;}
+  html,body{margin:0;padding:0;height:100%; overscroll-behavior-y:none;}
   body{
     background:var(--paper);
     color:var(--text);
@@ -146,6 +148,10 @@
   .attendee-dots .dot-sm:first-child{margin-left:0;}
 
   .list-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .row-link{width:100%; text-align:left; background:none; border:none; border-radius:8px; margin:0 -6px; padding-left:6px; padding-right:6px;}
+  .row-link.list-row{border-bottom:1px solid var(--line);}
+  .row-link.list-row:last-child{border-bottom:none;}
+  .row-link:active{background:var(--paper);}
   .list-row:last-child{border-bottom:none;}
   .rtitle{font-weight:600; font-size:14px; flex:1;}
   .del{background:var(--paper); border:1px solid var(--line); border-radius:10px; color:var(--text-soft); padding:9px; margin-left:auto; flex-shrink:0;}
@@ -604,17 +610,31 @@ function renderHome(){
   const latest = [...state.groceries].filter(g=>!g.checked).slice(-4).reverse();
   document.getElementById('homeGroceries').innerHTML = latest.length ? latest.map(g=>{
     const p = personOf(g.addedBy);
-    return `<div class="list-row"><span class="dot-sm" style="background:${p?p.hex:'#999'}">${p?p.name[0]:'?'}</span><span class="rtitle">${escapeHtml(g.name)}</span></div>`;
+    return `<button class="list-row row-link"><span class="dot-sm" style="background:${p?p.hex:'#999'}">${p?p.name[0]:'?'}</span><span class="rtitle">${escapeHtml(g.name)}</span></button>`;
   }).join('') : `<div class="empty">List's empty — nice.</div>`;
+
+  document.querySelectorAll('#homeTasks [data-goto-task]').forEach(el=> el.onclick = ()=> goToTasks());
+  document.querySelectorAll('#homeEvents [data-goto-date]').forEach(el=> el.onclick = ()=> goToCalendarDate(el.dataset.gotoDate));
+  document.querySelectorAll('#homeGroceries .row-link').forEach(el=> el.onclick = ()=> document.querySelector('#tabs [data-tab="groceries"]').click());
+}
+function goToTasks(){
+  document.querySelector('#tabs [data-tab="tasks"]').click();
+}
+function goToCalendarDate(dateStr){
+  document.querySelector('#tabs [data-tab="calendar"]').click();
+  const d = new Date(dateStr+'T00:00:00');
+  calCursor = new Date(d.getFullYear(), d.getMonth(), 1);
+  selectedDay = dateStr;
+  renderCalendar();
 }
 function taskRowHTML(t){
   const p = t.assignee==='everyone' ? null : personOf(t.assignee);
   const badge = badgeFor(t.due, t.time);
-  return `<div class="list-row">
+  return `<button class="list-row row-link" data-goto-task="${t.id}">
     <span class="dot-sm" style="background:${p?p.hex:'#8B8672'}">${p?p.name[0]:'H'}</span>
     <span class="rtitle">${escapeHtml(t.title)}</span>
     ${badge}
-  </div>`;
+  </button>`;
 }
 function attendeeDotsHTML(e){
   const ids = (e.attendees && e.attendees.length) ? e.attendees : [];
@@ -623,12 +643,12 @@ function attendeeDotsHTML(e){
 }
 function evRowHTML(e){
   const type = EVENT_TYPES[e.type]||EVENT_TYPES.plan;
-  return `<div class="list-row">
+  return `<button class="list-row row-link" data-goto-date="${e.date}">
     <span class="ev-type" style="background:${type.color}">${type.label}</span>
     <span class="rtitle">${escapeHtml(e.title)}</span>
     ${attendeeDotsHTML(e)}
     <span class="rmeta">${niceDate(e.date)}${e.time?' · '+niceTime(e.time):''}</span>
-  </div>`;
+  </button>`;
 }
 function badgeFor(due, time){
   if(!due) return '';
