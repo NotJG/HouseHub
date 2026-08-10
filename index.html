@@ -52,6 +52,15 @@
   button{font-family:inherit; cursor:pointer; touch-action:manipulation;}
   input,select,textarea{font-family:inherit;}
   ::selection{background:var(--mustard); color:var(--ink);}
+  /* Safari sometimes auto-wraps plain numbers it thinks look like dates/phone numbers
+     in a real <a> tag and styles it blue, even with format-detection meta set. Force it
+     to just look like normal text everywhere in the app. */
+  a[href^="x-apple-data-detectors:"], [id*="apple-data-detectors"], [class*="apple-data-detectors"]{
+    color: inherit !important;
+    text-decoration: inherit !important;
+    cursor: default !important;
+    pointer-events: none !important;
+  }
 
   /* ---------- App shell ---------- */
   #app{min-height:100vh; display:flex; flex-direction:column;}
