@@ -179,8 +179,11 @@
   .adv-toggle button{background:none;border:none;color:var(--text-soft);font-size:12px;text-decoration:underline; font-family:'IBM Plex Mono';}
   .adv-fields{display:none; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
   .adv-fields.show{display:flex;}
+  .mini-field{flex:1; min-width:90px;}
+  .mini-field label{display:block; font-size:10px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); margin-bottom:4px;}
   .adv-fields select, .adv-fields input{
-    border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 10px; font-size:16px;
+    width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:9px 10px; font-size:16px;
+    color:var(--text); -webkit-text-fill-color:var(--text);
   }
 
   /* grocery item */
@@ -273,6 +276,7 @@
   .field label{display:block; font-size:11px; font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft); margin-bottom:6px;}
   .field input, .field select{
     width:100%; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:11px 12px; font-size:16px;
+    color:var(--text); -webkit-text-fill-color:var(--text);
   }
   .field-row{display:flex; gap:10px;}
   .field-row .field{flex:1;}
@@ -388,13 +392,13 @@
         </div>
         <div class="adv-toggle"><button id="tAdvToggle">+ assign / due date</button></div>
         <div class="adv-fields" id="tAdvFields">
-          <select id="tAssignee"></select>
-          <input type="date" id="tDue">
-          <input type="time" id="tTime" placeholder="Time">
-          <select id="tRecur">
+          <div class="mini-field"><label>Assign</label><select id="tAssignee"></select></div>
+          <div class="mini-field"><label>Due</label><input type="date" id="tDue"></div>
+          <div class="mini-field"><label>Time</label><input type="time" id="tTime"></div>
+          <div class="mini-field"><label>Repeats</label><select id="tRecur">
             <option value="">One-time</option>
             <option value="weekly">Repeats weekly</option>
-          </select>
+          </select></div>
         </div>
         <div class="view-toggle" id="tViewToggle">
           <button data-view="date" class="active">By date</button>
