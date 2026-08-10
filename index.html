@@ -276,6 +276,35 @@
   .ag-editor{width:100%; min-height:120px; border:1px solid var(--line); border-radius:12px; padding:12px; font-size:16px; line-height:1.6; background:var(--paper); resize:vertical;}
   .stamp{font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono'; margin-top:6px;}
 
+  /* kittens */
+  .warn-row{display:flex; gap:10px; margin-bottom:12px;}
+  .warn-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+    background:var(--card); border:1.5px solid var(--line); border-radius:12px;
+    padding:12px; font-size:13px; font-weight:700; color:var(--text-soft);
+  }
+  .warn-btn.active{background:#FBEAEA; border-color:var(--overdue); color:var(--overdue);}
+  .warn-emoji{font-size:15px;}
+  .warn-banner{
+    display:flex; align-items:center; gap:10px; background:#FBEAEA; border:1px solid var(--overdue);
+    border-radius:14px; padding:12px 14px; margin-bottom:12px;
+  }
+  .warn-banner .wtext{flex:1; font-size:13px; font-weight:600; color:var(--overdue);}
+  .warn-banner .wsub{font-size:11px; font-weight:400; color:var(--text-soft); display:block; margin-top:1px;}
+  .warn-banner button{background:var(--overdue); color:#fff; border:none; border-radius:9px; padding:8px 12px; font-size:12px; font-weight:700; flex-shrink:0;}
+
+  .feed-slot{display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--line);}
+  .feed-slot:last-child{border-bottom:none;}
+  .feed-slot .slot-time{font-weight:700; font-size:14px; width:88px; flex-shrink:0;}
+  .feed-slot .slot-status{flex:1; font-size:12px; color:var(--text-faint); font-family:'IBM Plex Mono';}
+  .feed-slot .slot-status.done{color:var(--text-soft);}
+  .feed-check{
+    width:30px; height:30px; border-radius:9px; border:2px solid var(--line); background:var(--paper);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .feed-check svg{width:16px;height:16px; stroke:#fff; stroke-width:3; fill:none; opacity:0;}
+  .feed-check.done svg{opacity:1;}
+
   /* modal */
   nav#tabs.modal-open{display:none;}
   .modal-backdrop{position:fixed; inset:0; height:100dvh; background:rgba(30,43,36,.5); z-index:200; display:flex; align-items:flex-end; justify-content:center;}
@@ -352,6 +381,10 @@
       <button data-tab="agreement">
         <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
         <span>Agreement</span>
+      </button>
+      <button data-tab="kittens">
+        <svg viewBox="0 0 24 24"><circle cx="7" cy="6" r="1.6"/><circle cx="17" cy="6" r="1.6"/><circle cx="4.5" cy="10.5" r="1.6"/><circle cx="19.5" cy="10.5" r="1.6"/><path d="M12 12c-3.5 0-6 2.4-6 5.2 0 1.8 1.6 2.8 3.4 2.3.8-.2 1.7-.3 2.6-.3s1.8.1 2.6.3c1.8.5 3.4-.5 3.4-2.3 0-2.8-2.5-5.2-6-5.2z"/></svg>
+        <span>Kittens</span>
       </button>
     </nav>
 
@@ -457,6 +490,28 @@
         <h2>House Agreement</h2>
         <div id="agSections"></div>
       </section>
+
+      <!-- KITTENS -->
+      <section class="screen" id="screen-kittens">
+        <p class="eyebrow">Whiskers &amp; co.</p>
+        <h2>Kittens</h2>
+
+        <div class="warn-row">
+          <button class="warn-btn" id="warnFoodBtn"><span class="warn-emoji">🍖</span> Low on food</button>
+          <button class="warn-btn" id="warnLitterBtn"><span class="warn-emoji">🪣</span> Low on litter</button>
+        </div>
+        <div id="warnBanners"></div>
+
+        <div class="card">
+          <p class="card-title">Feeding schedule — today</p>
+          <div id="feedSlots"></div>
+        </div>
+
+        <div class="card">
+          <p class="card-title">Litter box — today</p>
+          <div id="litterRow"></div>
+        </div>
+      </section>
     </main>
   </div>
 </div>
@@ -478,7 +533,7 @@ const AG_SECTIONS = [
 ];
 const EVENT_TYPES = {plan:{label:'Plan', color:'#3C8C86'}, trip:{label:'Trip', color:'#C6455B'}, reminder:{label:'Reminder', color:'#D9A234'}};
 
-let state = { currentUser:null, groceries:[], tasks:[], events:[], agreement:{} };
+let state = { currentUser:null, groceries:[], tasks:[], events:[], agreement:{}, kittens:{feedings:[], litter:[], lowFood:null, lowLitter:null} };
 let calCursor = new Date();
 let selectedDay = fmt(new Date());
 
@@ -519,6 +574,7 @@ async function loadAll(){
   state.tasks = await loadKey('house:tasks', []);
   state.events = dedupeEvents(await loadKey('house:events', []));
   state.agreement = await loadKey('house:agreement', {});
+  state.kittens = await loadKey('house:kittens', {feedings:[], litter:[], lowFood:null, lowLitter:null});
 }
 function dedupeEvents(list){
   const seen = new Set();
@@ -1021,6 +1077,109 @@ function editSection(secId){
   };
 }
 
+/* ---------------- KITTENS ---------------- */
+const FEED_SLOTS = [
+  {id:'9am', label:'9:00 AM'},
+  {id:'3pm', label:'3:00 PM'},
+  {id:'7pm', label:'7:00 PM'},
+  {id:'bed', label:'Before bed'},
+];
+function todaysFeeding(slotId){
+  return state.kittens.feedings.find(f=>f.date===todayStr() && f.slot===slotId);
+}
+function todaysLitter(){
+  return state.kittens.litter.find(l=>l.date===todayStr());
+}
+function renderKittens(){
+  // warnings
+  let banners = '';
+  if(state.kittens.lowFood){
+    const p = personOf(state.kittens.lowFood.by);
+    banners += `<div class="warn-banner">
+      <span class="wtext">🍖 Running low on cat food<span class="wsub">Flagged by ${p?p.name:'someone'}</span></span>
+      <button id="resolveFood">Restocked</button>
+    </div>`;
+  }
+  if(state.kittens.lowLitter){
+    const p = personOf(state.kittens.lowLitter.by);
+    banners += `<div class="warn-banner">
+      <span class="wtext">🪣 Running low on litter<span class="wsub">Flagged by ${p?p.name:'someone'}</span></span>
+      <button id="resolveLitterWarn">Restocked</button>
+    </div>`;
+  }
+  document.getElementById('warnBanners').innerHTML = banners;
+  const foodBtn = document.getElementById('warnFoodBtn');
+  const litterWarnBtn = document.getElementById('warnLitterBtn');
+  foodBtn.classList.toggle('active', !!state.kittens.lowFood);
+  litterWarnBtn.classList.toggle('active', !!state.kittens.lowLitter);
+  foodBtn.onclick = ()=>{ if(!state.kittens.lowFood) raiseWarning('lowFood'); };
+  litterWarnBtn.onclick = ()=>{ if(!state.kittens.lowLitter) raiseWarning('lowLitter'); };
+  const rf = document.getElementById('resolveFood');
+  if(rf) rf.onclick = ()=> resolveWarning('lowFood');
+  const rl = document.getElementById('resolveLitterWarn');
+  if(rl) rl.onclick = ()=> resolveWarning('lowLitter');
+
+  // feeding slots
+  document.getElementById('feedSlots').innerHTML = FEED_SLOTS.map(slot=>{
+    const f = todaysFeeding(slot.id);
+    const p = f ? personOf(f.personId) : null;
+    const status = f ? `<span class="slot-status done">${p?p.name:'Someone'} · ${new Date(f.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>` : `<span class="slot-status">Not fed yet</span>`;
+    return `<div class="feed-slot">
+      <span class="slot-time">${slot.label}</span>
+      ${status}
+      <button class="feed-check ${f?'done':''}" data-feed="${slot.id}" style="${f?`background:${p?p.hex:'#3C8C86'};border-color:${p?p.hex:'#3C8C86'}`:''}">
+        <svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('[data-feed]').forEach(b=> b.onclick = ()=> toggleFeeding(b.dataset.feed));
+
+  // litter
+  const l = todaysLitter();
+  const p2 = l ? personOf(l.personId) : null;
+  document.getElementById('litterRow').innerHTML = `<div class="feed-slot">
+    <span class="slot-time">Today</span>
+    ${l ? `<span class="slot-status done">${p2?p2.name:'Someone'} · ${new Date(l.at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>` : `<span class="slot-status">Not done yet</span>`}
+    <button class="feed-check ${l?'done':''}" id="litterCheck" style="${l?`background:${p2?p2.hex:'#3C8C86'};border-color:${p2?p2.hex:'#3C8C86'}`:''}">
+      <svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>
+    </button>
+  </div>`;
+  document.getElementById('litterCheck').onclick = toggleLitter;
+}
+function toggleFeeding(slotId){
+  const existing = todaysFeeding(slotId);
+  if(existing){
+    if(!confirm(`Undo ${personOf(existing.personId)?.name||'this'}'s ${FEED_SLOTS.find(s=>s.id===slotId).label} feeding mark?`)) return;
+    state.kittens.feedings = state.kittens.feedings.filter(f=>f!==existing);
+  } else {
+    state.kittens.feedings.push({id:uid(), date:todayStr(), slot:slotId, personId:state.currentUser, at:Date.now()});
+  }
+  renderKittens();
+  saveKey('house:kittens', state.kittens);
+}
+function toggleLitter(){
+  const existing = todaysLitter();
+  if(existing){
+    if(!confirm(`Undo ${personOf(existing.personId)?.name||'this'}'s litter mark for today?`)) return;
+    state.kittens.litter = state.kittens.litter.filter(l=>l!==existing);
+  } else {
+    state.kittens.litter.push({id:uid(), date:todayStr(), personId:state.currentUser, at:Date.now()});
+  }
+  renderKittens();
+  saveKey('house:kittens', state.kittens);
+}
+function raiseWarning(key){
+  state.kittens[key] = {by:state.currentUser, at:Date.now()};
+  renderKittens();
+  saveKey('house:kittens', state.kittens);
+}
+function resolveWarning(key){
+  if(!confirm('Mark this as restocked?')) return;
+  state.kittens[key] = null;
+  renderKittens();
+  saveKey('house:kittens', state.kittens);
+}
+
 /* ---------------- render all ---------------- */
 function renderAll(){
   renderHome();
@@ -1028,6 +1187,7 @@ function renderAll(){
   renderTasks();
   renderCalendar();
   renderAgreement();
+  renderKittens();
 }
 
 initIdentity();
