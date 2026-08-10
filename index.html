@@ -148,11 +148,9 @@
   .attendee-dots .dot-sm:first-child{margin-left:0;}
 
   .list-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line);}
-  .row-link{width:100%; text-align:left; background:none; border:none; border-radius:8px; margin:0 -6px; padding-left:6px; padding-right:6px;}
-  .row-link.list-row{border-bottom:1px solid var(--line);}
-  .row-link.list-row:last-child{border-bottom:none;}
-  .row-link:active{background:var(--paper);}
   .list-row:last-child{border-bottom:none;}
+  .row-link{flex:1; display:flex; align-items:center; gap:10px; min-width:0; text-align:left; background:none; border:none; border-radius:8px; margin:-6px; padding:6px;}
+  .row-link:active{background:var(--paper);}
   .rtitle{font-weight:600; font-size:14px; flex:1;}
   .del{background:var(--paper); border:1px solid var(--line); border-radius:10px; color:var(--text-soft); padding:9px; margin-left:auto; flex-shrink:0;}
   .del svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;}
@@ -614,12 +612,14 @@ function renderHome(){
   const latest = [...state.groceries].filter(g=>!g.checked).slice(-4).reverse();
   document.getElementById('homeGroceries').innerHTML = latest.length ? latest.map(g=>{
     const p = personOf(g.addedBy);
-    return `<button class="list-row row-link"><span class="dot-sm" style="background:${p?p.hex:'#999'}">${p?p.name[0]:'?'}</span><span class="rtitle">${escapeHtml(g.name)}</span></button>`;
+    return `<div class="list-row"><button class="row-link" data-goto-groceries="1"><span class="dot-sm" style="background:${p?p.hex:'#999'}">${p?p.name[0]:'?'}</span><span class="rtitle">${escapeHtml(g.name)}</span></button></div>`;
   }).join('') : `<div class="empty">List's empty — nice.</div>`;
 
   document.querySelectorAll('#homeTasks [data-goto-task]').forEach(el=> el.onclick = ()=> goToTasks());
+  document.querySelectorAll('#homeTasks [data-home-tdel]').forEach(el=> el.onclick = ()=> deleteTask(el.dataset.homeTdel));
   document.querySelectorAll('#homeEvents [data-goto-date]').forEach(el=> el.onclick = ()=> goToCalendarDate(el.dataset.gotoDate));
-  document.querySelectorAll('#homeGroceries .row-link').forEach(el=> el.onclick = ()=> document.querySelector('#tabs [data-tab="groceries"]').click());
+  document.querySelectorAll('#homeEvents [data-home-edel]').forEach(el=> el.onclick = ()=> deleteEvent(el.dataset.homeEdel));
+  document.querySelectorAll('#homeGroceries [data-goto-groceries]').forEach(el=> el.onclick = ()=> document.querySelector('#tabs [data-tab="groceries"]').click());
 }
 function goToTasks(){
   document.querySelector('#tabs [data-tab="tasks"]').click();
@@ -634,11 +634,14 @@ function goToCalendarDate(dateStr){
 function taskRowHTML(t){
   const p = t.assignee==='everyone' ? null : personOf(t.assignee);
   const badge = badgeFor(t.due, t.time);
-  return `<button class="list-row row-link" data-goto-task="${t.id}">
-    <span class="dot-sm" style="background:${p?p.hex:'#8B8672'}">${p?p.name[0]:'H'}</span>
-    <span class="rtitle">${escapeHtml(t.title)}</span>
-    ${badge}
-  </button>`;
+  return `<div class="list-row">
+    <button class="row-link" data-goto-task="${t.id}">
+      <span class="dot-sm" style="background:${p?p.hex:'#8B8672'}">${p?p.name[0]:'H'}</span>
+      <span class="rtitle">${escapeHtml(t.title)}</span>
+      ${badge}
+    </button>
+    <button class="del" data-home-tdel="${t.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>`;
 }
 function attendeeDotsHTML(e){
   const ids = (e.attendees && e.attendees.length) ? e.attendees : [];
@@ -647,12 +650,15 @@ function attendeeDotsHTML(e){
 }
 function evRowHTML(e){
   const type = EVENT_TYPES[e.type]||EVENT_TYPES.plan;
-  return `<button class="list-row row-link" data-goto-date="${e.date}">
-    <span class="ev-type" style="background:${type.color}">${type.label}</span>
-    <span class="rtitle">${escapeHtml(e.title)}</span>
-    ${attendeeDotsHTML(e)}
-    <span class="rmeta">${niceDate(e.date)}${e.time?' · '+niceTime(e.time):''}</span>
-  </button>`;
+  return `<div class="list-row">
+    <button class="row-link" data-goto-date="${e.date}">
+      <span class="ev-type" style="background:${type.color}">${type.label}</span>
+      <span class="rtitle">${escapeHtml(e.title)}</span>
+      ${attendeeDotsHTML(e)}
+      <span class="rmeta">${niceDate(e.date)}${e.time?' · '+niceTime(e.time):''}</span>
+    </button>
+    <button class="del" data-home-edel="${e.id}"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>
+  </div>`;
 }
 function badgeFor(due, time){
   if(!due) return '';
@@ -927,9 +933,16 @@ function openEventModal(){
     if(saveBtn.disabled) return;
     const title = document.getElementById('mTitle').value.trim();
     if(!title) return;
-    saveBtn.disabled = true;
     const date = document.getElementById('mStart').value || selectedDay;
-    const endDate = document.getElementById('mEnd').value || null;
+    let endDate = document.getElementById('mEnd').value || null;
+    if(endDate && endDate < date){
+      alert('The end date is before the start date — swapping them so the trip makes sense.');
+      const tmp = date;
+      document.getElementById('mStart').value = endDate;
+      document.getElementById('mEnd').value = tmp;
+      return;
+    }
+    saveBtn.disabled = true;
     const time = document.getElementById('mTime').value || null;
     const type = document.getElementById('mType').value;
     const attendees = [...document.querySelectorAll('.person-toggle.on')].map(b=>b.dataset.person);
