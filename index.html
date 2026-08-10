@@ -749,9 +749,12 @@ function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':
 /* ---------------- GROCERIES ---------------- */
 document.getElementById('gAdd').addEventListener('click', addGrocery);
 document.getElementById('gInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addGrocery(); });
+function titleCase(str){
+  return str.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+}
 async function addGrocery(){
   const input = document.getElementById('gInput');
-  const name = input.value.trim();
+  const name = titleCase(input.value.trim());
   if(!name) return;
   state.groceries.push({id:uid(), name, checked:false, addedBy:state.currentUser, addedAt:Date.now()});
   input.value='';
